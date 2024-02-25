@@ -42,7 +42,12 @@ float texCoords[] = {
 
 对纹理采样的解释非常宽松，它可以采用几种不同的插值方式。所以我们需要自己告诉OpenGL该怎样对纹理**采样**。
 
-## 纹理环绕方式
+``````
+个人总结:
+这里指出了 纹理坐标 是左下角
+``````
+
+## 纹理环绕方式 (Wrapping)
 
 纹理坐标的范围通常是从(0, 0)到(1, 1)，那如果我们把纹理坐标设置在范围之外会发生什么？OpenGL默认的行为是重复这个纹理图像（我们基本上忽略浮点纹理坐标的整数部分），但OpenGL提供了更多的选择：
 
@@ -66,6 +71,11 @@ glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_MIRRORED_REPEAT);
 
 第一个参数指定了纹理目标；我们使用的是2D纹理，因此纹理目标是<var>GL_TEXTURE_2D</var>。第二个参数需要我们指定设置的选项与应用的纹理轴。我们打算配置的是`WRAP`选项，并且指定`S`和`T`轴。最后一个参数需要我们传递一个环绕方式(Wrapping)，在这个例子中OpenGL会给当前激活的纹理设定纹理环绕方式为<var>GL_MIRRORED_REPEAT</var>。
 
+``````
+个人总结:
+这里有指出 wrapping 可以分两个轴来确定.
+``````
+
 如果我们选择<var>GL_CLAMP_TO_BORDER</var>选项，我们还需要指定一个边缘的颜色。这需要使用<fun>glTexParameter</fun>函数的`fv`后缀形式，用<var>GL_TEXTURE_BORDER_COLOR</var>作为它的选项，并且传递一个float数组作为边缘的颜色值：
 
 ```c++
@@ -73,7 +83,7 @@ float borderColor[] = { 1.0f, 1.0f, 0.0f, 1.0f };
 glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);
 ```
 
-## 纹理过滤
+## 纹理过滤(Filtering)
 
 纹理坐标不依赖于分辨率(Resolution)，它可以是任意浮点值，所以OpenGL需要知道怎样将纹理像素(Texture Pixel，也叫Texel，译注1)映射到纹理坐标。当你有一个很大的物体但是纹理的分辨率很低的时候这就变得很重要了。你可能已经猜到了，OpenGL也有对于<def>纹理过滤</def>(Texture Filtering)的选项。纹理过滤有很多个选项，但是现在我们只讨论最重要的两种：<var>GL_NEAREST</var>和<var>GL_LINEAR</var>。
 
@@ -101,7 +111,12 @@ glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);
 glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 ```
+``````
+个人总结：
+这里提出了两种 Filtering 方式 GL_NEAREST, GL_LINEAR
+还可以分两种情况,一个是与原分辨率 缩小或 放大.
 
+``````
 ### 多级渐远纹理
 
 想象一下，假设我们有一个包含着上千物体的大房间，每个物体上都有纹理。有些物体会很远，但其纹理会拥有与近处物体同样高的分辨率。由于远处的物体可能只产生很少的片段，OpenGL从高分辨率纹理中为这些片段获取正确的颜色值就很困难，因为它需要对一个跨过纹理很大部分的片段只拾取一个纹理颜色。在小物体上这会产生不真实的感觉，更不用说对它们使用高分辨率纹理浪费内存的问题了。
@@ -122,6 +137,16 @@ OpenGL使用一种叫做<def>多级渐远纹理</def>(Mipmap)的概念来解决�
 <var>GL_NEAREST_MIPMAP_LINEAR</var>    | 在两个最匹配像素大小的多级渐远纹理之间进行线性插值，使用邻近插值进行采样
 <var>GL_LINEAR_MIPMAP_LINEAR</var>     | 在两个邻近的多级渐远纹理之间使用线性插值，并使用线性插值进行采样
 
+
+
+<var>GL_NEAREST_MIPMAP_NEAREST</var>   | 使用最邻近的多级渐远纹理来匹配像素大小，并使用邻近插值进行纹理采样
+
+<var>GL_LINEAR_MIPMAP_NEAREST</var>    | 使用最邻近的多级渐远纹理级别，并使用线性插值进行采样
+
+<var>GL_NEAREST_MIPMAP_LINEAR</var>    | 在两个最匹配像素大小的多级渐远纹理之间进行线性插值，使用邻近插值进行采样
+
+<var>GL_LINEAR_MIPMAP_LINEAR</var>     | 在两个邻近的多级渐远纹理之间使用线性插值，并使用线性插值进行采样
+
 就像纹理过滤一样，我们可以使用<fun>glTexParameteri</fun>将过滤方式设置为前面四种提到的方法之一：
 
 ```c++
@@ -131,11 +156,18 @@ glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
 一个常见的错误是，将放大过滤的选项设置为多级渐远纹理过滤选项之一。这样没有任何效果，因为多级渐远纹理主要是使用在纹理被缩小的情况下的：纹理放大不会使用多级渐远纹理，为放大过滤设置多级渐远纹理的选项会产生一个<var>GL_INVALID_ENUM</var>错误代码。
 
+
+
 # 加载与创建纹理
 
 使用纹理之前要做的第一件事是把它们加载到我们的应用中。纹理图像可能被储存为各种各样的格式，每种都有自己的数据结构和排列，所以我们如何才能把这些图像加载到应用中呢？一个解决方案是选一个需要的文件格式，比如`.PNG`，然后自己写一个图像加载器，把图像转化为字节序列。写自己的图像加载器虽然不难，但仍然挺麻烦的，而且如果要支持更多文件格式呢？你就不得不为每种你希望支持的格式写加载器了。
 
 另一个解决方案也许是一种更好的选择，使用一个支持多种流行格式的图像加载库来为我们解决这个问题。比如说我们要用的`stb_image.h`库。
+
+``````
+个人总结：
+这里有说明是怎么回事.
+``````
 
 ## stb_image.h
 
@@ -317,10 +349,17 @@ FragColor = texture(ourTexture, TexCoord) * vec4(ourColor, 1.0);
 
 我猜你会说我们的箱子喜欢跳70年代的迪斯科。
 
-## 纹理单元
+## 纹理单元(Texture Units)
 
 你可能会奇怪为什么`sampler2D`变量是个uniform，我们却不用<fun>glUniform</fun>给它赋值。使用<fun>glUniform1i</fun>，我们可以给纹理采样器分配一个位置值，这样的话我们能够在一个片段着色器中设置多个纹理。一个纹理的位置值通常称为一个<def>纹理单元</def>(Texture Unit)。一个纹理的默认纹理单元是0，它是默认的激活纹理单元，所以教程前面部分我们没有分配一个位置值。
+``````
+个人总结：
 
+纹理的位置 ==》 texture units
+纹理的默认 units 是 0
+
+
+``````
 纹理单元的主要目的是让我们在着色器中可以使用多于一个的纹理。通过把纹理单元赋值给采样器，我们可以一次绑定多个纹理，只要我们首先激活对应的纹理单元。就像<fun>glBindTexture</fun>一样，我们可以使用<fun>glActiveTexture</fun>激活纹理单元，传入我们需要使用的纹理单元：
 
 ```c++
